@@ -1,5 +1,15 @@
 import supabase from '../config/supabase.js';
 
+export async function countByProgram(program){
+    return await supabase
+    .from("calon_siswa")
+    .select("*", {
+        count: "exact",
+        head: true
+    })
+    .eq("pilihan_program", program)
+}
+
 export async function createNewStudents(students) {
 
     const { data, error } = await supabase
@@ -11,6 +21,16 @@ export async function createNewStudents(students) {
     return data[0];
 }
 
+export const getNewStudentById = async (id) => {
+  const { data, error } = await supabase
+    .from("calon_siswa")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  console.log("MODEL:", { data, error });
+  return { data, error };   // <--- harus return object
+};
 
 export const getNewStudents = async({
     page = 1,

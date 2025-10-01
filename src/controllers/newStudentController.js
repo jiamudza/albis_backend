@@ -1,5 +1,5 @@
 import cloudinary from '../config/cloudinary.js';
-import { createNewStudents, getNewStudents, getStudentPerProgram } from '../models/newStudentModel.js';
+import { countByProgram, createNewStudents, getNewStudents, getStudentPerProgram, getNewStudentById } from '../models/newStudentModel.js';
 
 export async function addStudent(req, res) {
     try {
@@ -7,6 +7,18 @@ export async function addStudent(req, res) {
         let derivedUrl = null;
 
         const student = req.body;
+        const { nama_panggilan, pilihan_program, NISN } = student;
+
+        const {count, error: countError}
+        = await
+        countByProgram(pilihan_program);
+
+        if(countError) throw countError;
+
+        const urutan = (count || 0) + 1;
+
+        const customId = `${nama_panggilan}-${NISN}-${pilihan_program}-${urutan}`
+        const password = `${nama_panggilan.toUpperCase()}-${pilihan_program.toUpperCase()}-${urutan}`
 
         // upload ke cloudinary
         if (req.file) {
@@ -22,7 +34,7 @@ export async function addStudent(req, res) {
         });
         }
 
-        const studentData = { ...student, foto: originalUrl, foto_kecil: derivedUrl };
+        const studentData = { id: customId, ...student, foto: originalUrl, foto_kecil: derivedUrl, password: password };
 
         // simpan ke supabase
         const newStudent = await createNewStudents(studentData);
@@ -34,6 +46,17 @@ export async function addStudent(req, res) {
     }
     
 }
+
+export const getRegisterById = async (req, res) => {
+  const { id } = req.params;
+  const { data, error } = await getNewStudentById(id);
+
+  if (error) return res.status(400).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: "Student not found" });
+
+  console.log("CONTROLLER:", data);
+  return res.json(data);
+};
 
 export const fetchStudentsBySummary = async (req, res) => {
     try {
