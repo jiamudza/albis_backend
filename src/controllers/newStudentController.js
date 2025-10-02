@@ -1,40 +1,57 @@
 import cloudinary from '../config/cloudinary.js';
 import { countByProgram, createNewStudents, getNewStudents, getStudentPerProgram, getNewStudentById } from '../models/newStudentModel.js';
+import bcrypt from 'bcryptjs';
 
 export async function addStudent(req, res) {
     try {
-        let originalUrl = null;
-        let derivedUrl = null;
+        let pasFotoUrl = null;
+        let buktiBayarUrl = null;
+        let pasFotoThumb = null;
+        let buktiBayarThumb = null;
 
         const student = req.body;
         const { nama_panggilan, pilihan_program, NISN } = student;
 
-        const {count, error: countError}
-        = await
-        countByProgram(pilihan_program);
-
+        // ambil urutan
+        const { count, error: countError } = await countByProgram(pilihan_program);
         if(countError) throw countError;
-
         const urutan = (count || 0) + 1;
 
-        const customId = `${nama_panggilan}-${NISN}-${pilihan_program}-${urutan}`
-        const password = `${nama_panggilan.toUpperCase()}-${pilihan_program.toUpperCase()}-${urutan}`
+        const customId = `${nama_panggilan}-${NISN}-${pilihan_program}-${urutan}`;
+        const plainPassword = `${nama_panggilan.toUpperCase()}-${pilihan_program.toUpperCase()}-${urutan}`;
 
-        // upload ke cloudinary
-        if (req.file) {
-            const result = await cloudinary.uploader.upload(req.file.path, {
-            folder: `siswa-2026-2027`,
-        });
-
-        originalUrl = result.secure_url;
-        derivedUrl = cloudinary.url(result.public_id, {
-            width: 300,
-            height: 300,
-            crop: "fill"
-        });
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(plainPassword, saltRounds)
+        // Upload pas_foto
+        if (req.files && req.files.foto && req.files.foto[0]) {
+            const result = await cloudinary.uploader.upload(req.files.foto[0].path, {
+                folder: `siswa-2026-2027`,
+            });
+            pasFotoUrl = result.secure_url;
+            pasFotoThumb = cloudinary.url(result.public_id, {
+                width: 300,
+                height: 300,
+                crop: "fill"
+            });
         }
 
-        const studentData = { id: customId, ...student, foto: originalUrl, foto_kecil: derivedUrl, password: password };
+        // Upload bukti_pembayaran
+        if (req.files && req.files.bukti_pembayaran && req.files.bukti_pembayaran[0]) {
+            const result = await cloudinary.uploader.upload(req.files.bukti_pembayaran[0].path, {
+                folder: `bukti_daftar-2026-2027`,
+            });
+            buktiBayarUrl = result.secure_url;
+        }
+
+        const studentData = { 
+            id: customId, 
+            ...student, 
+            foto: pasFotoUrl, 
+            foto_kecil: pasFotoThumb,
+            bukti_pembayaran: buktiBayarUrl, 
+            password: hashedPassword,
+            status_pembayaran: "Belum Lunas"
+        };
 
         // simpan ke supabase
         const newStudent = await createNewStudents(studentData);
@@ -44,8 +61,8 @@ export async function addStudent(req, res) {
         console.error(error);
         res.status(500).json({ success: false, message: "Gagal Menyimpan Data" });
     }
-    
 }
+
 
 export const getRegisterById = async (req, res) => {
   const { id } = req.params;

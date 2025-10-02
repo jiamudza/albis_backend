@@ -5,7 +5,10 @@ import { addStudent, fetchStudentsBySummary, getRegisterById } from '../controll
 const studentRoutes = express.Router();
 const upload = multer({ dest: 'uploads/' }); // Folder sementara untuk upload
 
-studentRoutes.post('/newStudents', upload.single('foto'), addStudent);
+studentRoutes.post('/newStudents', upload.fields([
+    {name: 'foto', maxCount: 1},
+    {name: 'bukti_pembayaran', maxCount: 1}
+]), addStudent);
 studentRoutes.get('/getNewStudents', fetchStudentsBySummary);
 studentRoutes.get('/getNewStudents/:id', getRegisterById)
 
