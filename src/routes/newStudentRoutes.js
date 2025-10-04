@@ -3,7 +3,8 @@ import multer from 'multer';
 import { addStudent, fetchStudentsBySummary, getRegisterById } from '../controllers/newStudentController.js';
 
 const studentRoutes = express.Router();
-const upload = multer({ dest: 'uploads/' }); // Folder sementara untuk upload
+const storage = multer.memoryStorage()
+const upload = multer({storage}) // Folder sementara untuk upload
 
 studentRoutes.post('/newStudents', upload.fields([
     {name: 'foto', maxCount: 1},
