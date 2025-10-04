@@ -14,7 +14,7 @@ export async function addStudent(req, res) {
 
         // ambil urutan
         const { count, error: countError } = await countByProgram(pilihan_program);
-        if(countError) throw countError;
+        if (countError) throw countError;
         const urutan = (count || 0) + 1;
 
         const customId = `${nama_panggilan}-${NISN}-${pilihan_program}-${urutan}`;
@@ -23,32 +23,39 @@ export async function addStudent(req, res) {
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(plainPassword, saltRounds)
         // Upload pas_foto
-        if (req.files && req.files.foto && req.files.foto[0]) {
-            const result = await cloudinary.uploader.upload(req.files.foto[0].path, {
-                folder: `siswa-2026-2027`,
-            });
+        if (req.files?.foto?.[0]) {
+            const result = await uploadToCloudinary(
+                req.files.foto[0],
+                "siswa-2026-2027"
+            );
+
             pasFotoUrl = result.secure_url;
+
+            // generate derived thumbnail (300x300, crop fill)
             pasFotoThumb = cloudinary.url(result.public_id, {
                 width: 300,
                 height: 300,
-                crop: "fill"
+                crop: "fill",
             });
         }
 
+
         // Upload bukti_pembayaran
-        if (req.files && req.files.bukti_pembayaran && req.files.bukti_pembayaran[0]) {
-            const result = await cloudinary.uploader.upload(req.files.bukti_pembayaran[0].path, {
-                folder: `bukti_daftar-2026-2027`,
-            });
+        if (req.files?.bukti_pembayaran?.[0]) {
+            const result = await uploadToCloudinary(
+                req.files.bukti_pembayaran[0],
+                "bukti_daftar-2026-2027"
+            );
+
             buktiBayarUrl = result.secure_url;
         }
 
-        const studentData = { 
-            id: customId, 
-            ...student, 
-            foto: pasFotoUrl, 
+        const studentData = {
+            id: customId,
+            ...student,
+            foto: pasFotoUrl,
             foto_kecil: pasFotoThumb,
-            bukti_pembayaran: buktiBayarUrl, 
+            bukti_pembayaran: buktiBayarUrl,
             password: hashedPassword,
             status_pembayaran: "Belum Lunas"
         };
@@ -65,14 +72,14 @@ export async function addStudent(req, res) {
 
 
 export const getRegisterById = async (req, res) => {
-  const { id } = req.params;
-  const { data, error } = await getNewStudentById(id);
+    const { id } = req.params;
+    const { data, error } = await getNewStudentById(id);
 
-  if (error) return res.status(400).json({ error: error.message });
-  if (!data) return res.status(404).json({ error: "Student not found" });
+    if (error) return res.status(400).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: "Student not found" });
 
-  console.log("CONTROLLER:", data);
-  return res.json(data);
+    console.log("CONTROLLER:", data);
+    return res.json(data);
 };
 
 export const fetchStudentsBySummary = async (req, res) => {
@@ -104,14 +111,13 @@ export const fetchStudentsBySummary = async (req, res) => {
         //summary by program
         const summary = await getStudentPerProgram();
 
-        res.json({ 
-            success: true, data: result.data, total: result.total, page: result.page, limit: result.limit, totalPages: result.totalPages, hasPrevPage: result.hasPreviousPage, hasNextPage: result.hasNextPage, summary, 
+        res.json({
+            success: true, data: result.data, total: result.total, page: result.page, limit: result.limit, totalPages: result.totalPages, hasPrevPage: result.hasPreviousPage, hasNextPage: result.hasNextPage, summary,
         });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ success: false, message: "Gagal Mengambil Data" }); 
+        res.status(500).json({ success: false, message: "Gagal Mengambil Data" });
 
     }
 }
-        
