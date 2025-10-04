@@ -1,6 +1,7 @@
 import cloudinary from '../config/cloudinary.js';
 import { countByProgram, createNewStudents, getNewStudents, getStudentPerProgram, getNewStudentById } from '../models/newStudentModel.js';
 import bcrypt from 'bcryptjs';
+import { uploadToCloudinary } from '../config/cloudinary.js';
 
 export async function addStudent(req, res) {
     try {
