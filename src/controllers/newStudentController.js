@@ -26,7 +26,7 @@ export async function addStudent(req, res) {
         // Upload pas_foto
         if (req.files?.foto?.[0]) {
             const result = await uploadToCloudinary(
-                req.files.foto[0],
+                req.files.foto[0].buffer,
                 "siswa-2026-2027"
             );
 
@@ -44,7 +44,7 @@ export async function addStudent(req, res) {
         // Upload bukti_pembayaran
         if (req.files?.bukti_pembayaran?.[0]) {
             const result = await uploadToCloudinary(
-                req.files.bukti_pembayaran[0],
+                req.files.bukti_pembayaran[0].buffer,
                 "bukti_daftar-2026-2027"
             );
 
