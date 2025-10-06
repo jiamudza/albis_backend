@@ -1,5 +1,5 @@
 import cloudinary from '../config/cloudinary.js';
-import { countByProgram, createNewStudents, getNewStudents, getStudentPerProgram, getNewStudentById } from '../models/newStudentModel.js';
+import { countByProgram, createNewStudents, getNewStudents, getStudentPerProgram, getNewStudentById, togglePaymentStatus } from '../models/newStudentModel.js';
 import bcrypt from 'bcryptjs';
 import { uploadToCloudinary } from '../config/cloudinary.js';
 
@@ -122,3 +122,17 @@ export const fetchStudentsBySummary = async (req, res) => {
 
     }
 }
+
+export const togglePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await togglePaymentStatus(id);
+
+    res.status(200).json({
+      message: "Status pembayaran berhasil diubah",
+      data: updated,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { addStudent, fetchStudentsBySummary, getRegisterById } from '../controllers/newStudentController.js';
+import { addStudent, fetchStudentsBySummary, getRegisterById, togglePayment } from '../controllers/newStudentController.js';
 
 const studentRoutes = express.Router();
 const storage = multer.memoryStorage()
@@ -12,5 +12,6 @@ studentRoutes.post('/newStudents', upload.fields([
 ]), addStudent);
 studentRoutes.get('/getNewStudents', fetchStudentsBySummary);
 studentRoutes.get('/getNewStudents/:id', getRegisterById)
+studentRoutes.patch('/:id/togglePayment', togglePayment)
 
 export default studentRoutes;

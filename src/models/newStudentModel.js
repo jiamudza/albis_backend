@@ -94,3 +94,29 @@ export const getStudentPerProgram = async() => {
     if (error) throw error;
     return data;
 }
+
+export const togglePaymentStatus = async (id) => {
+  // Ambil data saat ini
+  const { data: student, error: fetchError } = await supabase
+    .from("calon_siswa")
+    .select("status_pembayaran")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!student) throw new Error("Student not found");
+
+  // Tentukan status baru
+  const newStatus =
+    student.status_pembayaran === "Lunas" ? "Belum Lunas" : "Lunas";
+
+  // Update status di database
+  const { data, error } = await supabase
+    .from("calon_siswa")
+    .update({ status_pembayaran: newStatus })
+    .eq("id", id)
+    .select();
+
+  if (error) throw error;
+  return data[0];
+};
