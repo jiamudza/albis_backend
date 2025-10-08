@@ -10,7 +10,8 @@ app.use(cookieParser());
 app.use(cors({
   origin: [
     "https://smpitalbanna.sch.id",  // production frontend
-    "https://albis.netlify.app",    // Netlify preview/staging       // optional: untuk pengujian lokal (Vite React)
+    "https://albis.netlify.app",
+    "http://localhost:3000"    // Netlify preview/staging       // optional: untuk pengujian lokal (Vite React)
   ],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
