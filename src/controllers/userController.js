@@ -61,6 +61,7 @@ export const loginUser = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000,
     });
 
+    console.log(res)
     res.status(200).json({
       message: "Login berhasil",
       user: { id: user.id, username: user.username, role: user.role },

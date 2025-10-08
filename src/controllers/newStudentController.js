@@ -83,45 +83,95 @@ export const getRegisterById = async (req, res) => {
     return res.json(data);
 };
 
+// export const fetchStudentsBySummary = async (req, res) => {
+//     try {
+//         const {
+//             page,
+//             limit,
+//             // sort,
+//             search,
+//             gender,
+//             program,
+//             hasPrevPage,
+//             hasNextPage,
+//             startDate,
+//             endDate
+//         } = req.query;
+
+//         const result = await getNewStudents({
+//             page: parseInt(page) || 1,
+//             limit: parseInt(limit) || 10,
+//             // sort: sort || 'asc',
+//             search: search || '',
+//             gender: gender || null,
+//             program: program || null,
+//             startDate: startDate || null,
+//             endDate: endDate || null,
+//         });
+
+//         //summary by program
+//         const summary = await getStudentPerProgram();
+
+//         res.json({
+//             success: true, data: result.data, total: result.total, page: result.page, limit: result.limit, totalPages: result.totalPages, hasPrevPage: result.hasPreviousPage, hasNextPage: result.hasNextPage, summary,
+//         });
+
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ success: false, message: "Gagal Mengambil Data" });
+
+//     }
+// }
+
 export const fetchStudentsBySummary = async (req, res) => {
-    try {
-        const {
-            page,
-            limit,
-            sort,
-            search,
-            gender,
-            program,
-            hasPrevPage,
-            hasNextPage,
-            startDate,
-            endDate
-        } = req.query;
+  try {
+    const {
+      page,
+      limit,
+      sort,
+      search,
+      gender,
+      program,
+      startDate,
+      endDate,
+    } = req.query;
 
-        const result = await getNewStudents({
-            page: parseInt(page) || 1,
-            limit: parseInt(limit) || 10,
-            sort: sort || 'asc',
-            search: search || '',
-            gender: gender || null,
-            program: program || null,
-            startDate: startDate || null,
-            endDate: endDate || null,
-        });
+    // Tentukan arah sort
+    const sortDirection =
+      sort && ['asc', 'desc'].includes(sort.toLowerCase())
+        ? sort.toLowerCase()
+        : 'desc'; // default berdasarkan created_at DESC
 
-        //summary by program
-        const summary = await getStudentPerProgram();
+    const result = await getNewStudents({
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 10,
+      sort: sortDirection,
+      search: search || '',
+      gender: gender || null,
+      program: program || null,
+      startDate: startDate || null,
+      endDate: endDate || null,
+    });
 
-        res.json({
-            success: true, data: result.data, total: result.total, page: result.page, limit: result.limit, totalPages: result.totalPages, hasPrevPage: result.hasPreviousPage, hasNextPage: result.hasNextPage, summary,
-        });
+    const summary = await getStudentPerProgram();
 
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Gagal Mengambil Data" });
+    res.json({
+      success: true,
+      data: result.data,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+      hasPrevPage: result.hasPreviousPage,
+      hasNextPage: result.hasNextPage,
+      summary,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Gagal Mengambil Data' });
+  }
+};
 
-    }
-}
 
 export const togglePayment = async (req, res) => {
   try {

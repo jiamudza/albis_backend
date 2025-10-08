@@ -22,9 +22,24 @@ export const findUserByUsername = async (username) => {
 export const getUserProfile = async (id) => {
   const { data, error } = await supabase
     .from("users")
-    .select("*")
+    .select(`
+      *,
+      guru: users_id_role_fkey (
+        id_guru,
+        nip,
+        nama_guru,
+        email,
+        no_hp,
+        jenis_kelamin,
+        alamat,
+        mapel,
+        status_aktif,
+        tanggal_lahir
+      )
+    `)
     .ilike("id", id)
     .single();
+
   if (error) throw error;
   return data;
 };

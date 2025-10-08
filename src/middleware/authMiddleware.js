@@ -30,7 +30,8 @@ export const authenticateToken = (req, res, next) => {
 
 export const isAdmin = (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: "User not authenticated" });
-  if (!req.user.role || !Array.isArray(req.user.role) || !req.user.role.includes("admin")) {
+  console.log(req.user.role)
+  if (!req.user.role || !Array.isArray(req.user.role) || !req.user.role.includes("Admin")) {
     return res.status(403).json({ error: "Admin only" });
   }
   next();
