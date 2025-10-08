@@ -58,6 +58,7 @@ export const loginUser = async (req, res) => {
   httpOnly: true,
   secure: true,          // HARUS true di HTTPS (Netlify & Vercel keduanya HTTPS)
   sameSite: "none",      // HARUS "none" agar bisa cross-site
+  path: "/",
   maxAge: 24 * 60 * 60 * 1000,
 });
 
