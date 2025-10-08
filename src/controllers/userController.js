@@ -54,12 +54,12 @@ export const loginUser = async (req, res) => {
     );
 
     // simpan token di HTTP-only cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "none",
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+  res.cookie("token", token, {
+  httpOnly: true,
+  secure: true,          // HARUS true di HTTPS (Netlify & Vercel keduanya HTTPS)
+  sameSite: "none",      // HARUS "none" agar bisa cross-site
+  maxAge: 24 * 60 * 60 * 1000,
+});
 
     res.status(200).json({
       message: "Login berhasil",
