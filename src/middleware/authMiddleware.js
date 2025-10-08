@@ -39,7 +39,7 @@ export const isAdmin = (req, res, next) => {
 
 export const isSPMB = (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: "User not authenticated" });
-  if (!req.user.role || !Array.isArray(req.user.role) || !req.user.role.includes("spmb")) {
+  if (!req.user.role || !Array.isArray(req.user.role) || !req.user.role.includes("SPMB")) {
     return res.status(403).json({ error: "Panitia Inti Saja" });
   }
   next();
