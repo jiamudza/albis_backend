@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-    origin: ["https://smpitalbanna.sch.id", "http://localhost:3000"], // frontend React
+    origin: ["https://smpitalbanna.sch.id", "https://albis.netlify.app", "http://localhost:3000"], // frontend React
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
     credentials: true
 }));

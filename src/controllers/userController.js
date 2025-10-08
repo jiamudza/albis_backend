@@ -61,7 +61,6 @@ export const loginUser = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000,
     });
 
-    console.log(res)
     res.status(200).json({
       message: "Login berhasil",
       user: { id: user.id, username: user.username, role: user.role },
@@ -75,17 +74,14 @@ export const loginUser = async (req, res) => {
 export const getProfile = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
-    console.log("🔍 AUTH HEADER:", authHeader);
 
     if (!authHeader) {
       return res.status(401).json({ error: "Token missing" });
     }
 
     const token = authHeader.split(" ")[1];
-    console.log("🔍 TOKEN VALUE:", token);
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("✅ DECODED:", decoded);
 
     const user = await getUserProfile(decoded.id);
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -102,5 +98,6 @@ export const getProfile = async (req, res) => {
 // logout
 export const logoutUser = (req, res) => {
   res.clearCookie("token");
+  console.log(res)
   res.status(200).json({ message: "Logout berhasil" });
 };
