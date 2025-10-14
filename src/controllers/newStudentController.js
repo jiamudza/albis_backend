@@ -58,7 +58,8 @@ export async function addStudent(req, res) {
             foto_kecil: pasFotoThumb,
             bukti_pembayaran: buktiBayarUrl,
             password: hashedPassword,
-            status_pembayaran: "Belum Lunas"
+            status_pembayaran: "Belum Lunas",
+            fase: "Gelombang 1"
         };
 
         // simpan ke supabase
