@@ -4,6 +4,7 @@ import userRoute from './routes/userRoute.js'
 import absenRoutes from './routes/absensiRoute.js'
 import questionRouter from './routes/questionRoute.js';
 import tahtaRouter from './routes/tahtaRoute.js';
+import loginTestRoute from './routes/loginTestRoute.js';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
@@ -26,5 +27,6 @@ app.use('/api', userRoute);
 app.use('/api', absenRoutes);
 app.use('/api', questionRouter);
 app.use('/api', tahtaRouter);
+app.use('/api', loginTestRoute);
 
 export default app;

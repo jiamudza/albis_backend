@@ -1,6 +1,7 @@
 import express from 'express'
 import multer from 'multer'
-import { createQuestion } from '../controllers/questionController.js'
+import { createQuestion, submitExam } from '../controllers/questionController.js'
+
 const storage = multer.memoryStorage()
 const upload = multer({storage})
 
@@ -11,5 +12,6 @@ questionRouter.post(
   upload.single('image'),
   createQuestion
 )
+questionRouter.post('/submitExam', submitExam)
 
 export default questionRouter

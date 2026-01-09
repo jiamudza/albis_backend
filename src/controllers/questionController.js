@@ -1,11 +1,13 @@
 import cloudinary from '../config/cloudinary.js'
-import { QuestionModel } from '../models/questionModel.js'
+import { QuestionModel, } from '../models/questionModel.js'
+import supabase from '../config/supabase.js'
 
 export const createQuestion = async (req, res) => {
   try {
     const {
       date,
       question,
+      wacana,
       types,
       options,
       correctAnswer,
@@ -14,7 +16,8 @@ export const createQuestion = async (req, res) => {
       leftItems,
       rightItems,
       matchAnswers,
-      isDraft
+      isDraft,
+      category
     } = req.body
 
     let imageData = null
@@ -46,6 +49,8 @@ export const createQuestion = async (req, res) => {
     const payload = {
       question_date: date,
       question,
+      wacana,
+      category,
       types: JSON.parse(types),
       image: imageData,
       options: options ? JSON.parse(options) : null,
@@ -72,3 +77,41 @@ export const createQuestion = async (req, res) => {
     })
   }
 }
+
+import { ExamModel } from '../models/questionModel.js';
+
+export const submitExam = async (req, res) => {
+  try {
+    const payload = req.body;
+
+    if (!payload || !payload.id_calon_siswa) {
+      return res.status(400).json({ message: 'id_calon_siswa wajib diisi' });
+    }
+
+    // Cek apakah record sudah ada
+    const { data: existing } = await supabase
+      .from('spmb_tes_akademik')
+      .select('id_calon_siswa')
+      .eq('id_calon_siswa', payload.id_calon_siswa)
+      .single();
+
+    let result;
+
+    if (existing) {
+      // Update existing record
+      result = await ExamModel.updateById(payload.id_calon_siswa, payload);
+    } else {
+      // Insert baru
+      result = await ExamModel.create(payload);
+    }
+
+    return res.status(200).json({
+      message: 'Exam submitted successfully',
+      data: result,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Terjadi kesalahan server' });
+  }
+};
+
