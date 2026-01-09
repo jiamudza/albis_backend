@@ -1,5 +1,5 @@
 import cloudinary from '../config/cloudinary.js';
-import { countByProgram, createNewStudents, getNewStudents, getStudentPerProgram, getNewStudentById, togglePaymentStatus } from '../models/newStudentModel.js';
+import { countByProgram, createNewStudents, getNewStudents, getStudentPerProgram, getNewStudentById, togglePaymentStatus, deleteNewStudent } from '../models/newStudentModel.js';
 import bcrypt from 'bcryptjs';
 import { uploadToCloudinary } from '../config/cloudinary.js';
 
@@ -185,5 +185,19 @@ export const togglePayment = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const removeNewStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ message: "Student ID is required" });
+
+    await deleteNewStudent(id);
+
+    res.status(200).json({ message: "Student deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting student:", error);
+    res.status(500).json({ message: "Failed to delete student", error: error.message });
   }
 };

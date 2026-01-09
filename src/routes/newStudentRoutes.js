@@ -1,11 +1,11 @@
 import express from 'express';
 import multer from 'multer';
-import { addStudent, fetchStudentsBySummary, getRegisterById, togglePayment } from '../controllers/newStudentController.js';
-import { authenticateToken, isSPMB } from '../middleware/authMiddleware.js';
+import { addStudent, fetchStudentsBySummary, getRegisterById, removeNewStudent, togglePayment } from '../controllers/newStudentController.js';
+import { authenticateToken, isAdmin, isSPMB } from '../middleware/authMiddleware.js';
 
 const studentRoutes = express.Router();
 const storage = multer.memoryStorage()
-const upload = multer({storage}) // Folder sementara untuk upload
+const upload = multer({storage})
 
 studentRoutes.post('/newStudents', upload.fields([
     {name: 'foto', maxCount: 1},
@@ -14,5 +14,6 @@ studentRoutes.post('/newStudents', upload.fields([
 studentRoutes.get('/getNewStudents',authenticateToken, fetchStudentsBySummary);
 studentRoutes.get('/getNewStudents/:id', authenticateToken, isSPMB, getRegisterById)
 studentRoutes.patch('/:id/togglePayment', togglePayment)
+studentRoutes.delete('/newStudents/:id', authenticateToken, isSPMB, removeNewStudent)
 
 export default studentRoutes;

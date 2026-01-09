@@ -182,3 +182,12 @@ export const togglePaymentStatus = async (id) => {
     if (error) throw error;
     return data[0];
 };
+
+export const deleteNewStudent = async (id) => {
+  const { error } = await supabase
+    .from("calon_siswa")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+};

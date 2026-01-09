@@ -1,6 +1,9 @@
 import express from 'express';
 import studentRoutes from './routes/newStudentRoutes.js';
 import userRoute from './routes/userRoute.js'
+import absenRoutes from './routes/absensiRoute.js'
+import questionRouter from './routes/questionRoute.js';
+import tahtaRouter from './routes/tahtaRoute.js';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 
@@ -20,5 +23,8 @@ app.use(cors({
 
 app.use('/api', studentRoutes);
 app.use('/api', userRoute);
+app.use('/api', absenRoutes);
+app.use('/api', questionRouter);
+app.use('/api', tahtaRouter);
 
 export default app;
