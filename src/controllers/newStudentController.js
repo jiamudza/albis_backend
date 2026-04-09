@@ -59,7 +59,7 @@ export async function addStudent(req, res) {
             bukti_pembayaran: buktiBayarUrl,
             password: hashedPassword,
             status_pembayaran: "Belum Lunas",
-            fase: "Gelombang 2"
+            fase: "Gelombang 3"
         };
 
         // simpan ke supabase
