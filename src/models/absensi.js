@@ -1,53 +1,51 @@
 import supabase from '../config/supabase.js';
 
 export const inputAbsen = {
-  async getAbsenByUserAndDate(user_id, tanggal) {
+  async getAbsenByUserAndDate(userId, tanggal) {
     const { data, error } = await supabase
-      .from('absensi')
-      .select('*')
-      .eq('user_id', user_id)
-      .eq('tanggal_absen', tanggal)
-      .maybeSingle()
+      .from("absensi")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("tanggal_absen", tanggal)
+      .maybeSingle();
 
-    if (error) throw error
-    return data
+    if (error) throw error;
+    return data;
   },
 
-  async insertAbsen(user_id, tanggal, jam, status) {
+  async insertAbsen(userId, tanggal, jam, status = "hadir") {
     const { data, error } = await supabase
-      .from('absensi')
-      .insert([
-        {
-          user_id,
-          tanggal_absen: tanggal,
-          jam_absen: jam,
-          status,
-          created_at: new Date().toISOString()
-        }
-      ])
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  },
-
-  async updateAbsen(id, jam, status) {
-    const { data, error } = await supabase
-      .from('absensi')
-      .update({
+      .from("absensi")
+      .insert({
+        user_id: userId,
+        tanggal_absen: tanggal,
         jam_absen: jam,
         status,
         created_at: new Date().toISOString()
       })
-      .eq('id', id)
       .select()
-      .single()
+      .single();
 
-    if (error) throw error
-    return data
+    if (error) throw error;
+    return data;
+  },
+
+  async updateAbsen(id, jam, status) {
+    const { data, error } = await supabase
+      .from("absensi")
+      .update({
+        jam_absen: jam,
+        status,
+        /*updated_at: new Date().toISOString()*/
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
-}
+};
 
 function formatYMD(date) {
   const y = date.getFullYear();
@@ -73,6 +71,24 @@ function parseDateRange(startDate, endDate) {
   };
 }
 
+function getDateRange(startDate, endDate) {
+  const dates = [];
+
+  const current = new Date(startDate);
+  const end = new Date(endDate);
+
+  while (current <= end) {
+    // 0 = Minggu
+    if (current.getDay() !== 0) {
+      dates.push(formatYMD(current));
+    }
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return dates;
+}
+
 export async function getAbsenSummaryListModel({
   page = 1,
   limit = 10,
@@ -82,45 +98,283 @@ export async function getAbsenSummaryListModel({
 }) {
   const offset = (page - 1) * limit;
 
-  // Ambil user list dahulu (ini yang dipagination)
+  // 1. QUERY USERS (search dulu, baru pagination)
   let userQuery = supabase
     .from("users")
-    .select("*", { count: "exact" })
+    .select("*", { count: "exact" });
+
+  if (search) {
+    userQuery = userQuery.ilike(
+      "nama_lengkap",
+      `%${search}%`
+    );
+  }
+
+  userQuery = userQuery
     .order("nama_lengkap", { ascending: true })
     .range(offset, offset + limit - 1);
 
-  if (search) {
-    userQuery = userQuery.ilike("nama_lengkap", `%${search}%`);
+  const { data: users, count: totalUsers, error: userError } =
+    await userQuery;
+
+  if (userError) {
+    return { error: userError, data: null };
   }
 
-  const { data: users, count: totalUsers, error: userError } = await userQuery;
+  if (!users || users.length === 0) {
+    return {
+      data: [],
+      total: 0,
+      error: null
+    };
+  }
 
-  if (userError) return { error: userError, data: null };
-
+  // 2. DATE RANGE
   const { start, end } = parseDateRange(startDate, endDate);
+  const allDates = getDateRange(start, end);
 
-  // Loop setiap user dan hitung jumlah absennya
-  const results = [];
+  // 3. FIX: gunakan userIds (INI BUG UTAMA YANG KAMU PUNYA)
+  const userIds = users.map((user) => user.id);
 
-  for (const user of users) {
-    const { count: total_absen, error: absenError } = await supabase
-      .from("absensi")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id_role)
-      .gte("tanggal_absen", start)
-      .lte("tanggal_absen", end);
+  const { data: allAbsensi, error: absenError } = await supabase
+    .from("absensi")
+    .select("*")
+    .in("user_id", userIds)
+    .gte("tanggal_absen", start)
+    .lte("tanggal_absen", end);
 
-    if (absenError) return { error: absenError, data: null };
-    console.log(start)
-    results.push({
-      user,
-      total_absen
-    });
+  if (absenError) {
+    return { error: absenError, data: null };
   }
+
+  // 4. GROUPING ABSENSI PER USER
+  const absensiByUser = {};
+
+  (allAbsensi || []).forEach((absen) => {
+    if (!absensiByUser[absen.user_id]) {
+      absensiByUser[absen.user_id] = [];
+    }
+    absensiByUser[absen.user_id].push(absen);
+  });
+
+  // 5. BUILD RESULT
+  const results = users.map((user) => {
+    const userAbsensi = absensiByUser[user.id] || [];
+
+    const absenMap = {};
+
+    userAbsensi.forEach((absen) => {
+      absenMap[absen.tanggal_absen] = absen;
+    });
+
+    let hadir = 0;
+    let izin = 0;
+    let sakit = 0;
+    let tidak_hadir = 0;
+
+    const detail_absensi = [];
+
+    allDates.forEach((tanggal) => {
+      const absen = absenMap[tanggal];
+
+      if (absen) {
+        const status = (absen.status || "").toLowerCase();
+
+        switch (status) {
+          case "hadir":
+            hadir++;
+            break;
+          case "izin":
+            izin++;
+            break;
+          case "sakit":
+            sakit++;
+            break;
+          default:
+            tidak_hadir++;
+        }
+
+        detail_absensi.push({
+          tanggal,
+          status: absen.status,
+          jam_absen: absen.jam_absen,
+          created_at: absen.created_at
+        });
+      } else {
+        tidak_hadir++;
+        detail_absensi.push({
+          tanggal,
+          status: "tidak hadir",
+          jam_absen: null,
+          created_at: null
+        });
+      }
+    });
+
+    const totalHari = allDates.length || 1;
+
+    return {
+      id: user.id,
+      username: user.username,
+      nama_lengkap: user.nama_lengkap,
+      email: user.email,
+
+      jumlah_hadir: hadir,
+      jumlah_izin: izin,
+      jumlah_sakit: sakit,
+      jumlah_tidak_hadir: tidak_hadir,
+
+      total_hari: totalHari,
+
+      persentase_kehadiran: Number(
+        ((hadir / totalHari) * 100).toFixed(2)
+      ),
+
+      detail_absensi
+    };
+  });
 
   return {
     data: results,
     total: totalUsers,
     error: null
+  };
+}
+
+
+function getMonthRange(month, year) {
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+
+  const lastDay = new Date(year, month, 0).getDate();
+
+  const end = `${year}-${String(month).padStart(2, "0")}-${lastDay}`;
+
+  return { start, end };
+}
+
+export async function getAbsenSummaryByIdModel({
+  id,
+  startDate = "",
+  endDate = ""
+}) {
+  const { start, end } = parseDateRange(
+    startDate,
+    endDate
+  );
+
+  const { data: user, error: userError } =
+    await supabase
+      .from("users")
+      .select("*")
+      .eq("id_role", id)
+      .single();
+
+  if (userError) {
+    return {
+      error: userError,
+      data: null
+    };
+  }
+
+  const {
+    data: absensi,
+    error: absenError
+  } = await supabase
+    .from("absensi")
+    .select("*")
+    .eq("user_id", id)
+    .gte("tanggal_absen", start)
+    .lte("tanggal_absen", end)
+    .order("tanggal_absen", {
+      ascending: true
+    });
+
+  if (absenError) {
+    return {
+      error: absenError,
+      data: null
+    };
+  }
+
+  const allDates = getDateRange(start, end);
+
+  const absenMap = {};
+
+  absensi.forEach(item => {
+    absenMap[item.tanggal_absen] = item;
+  });
+
+  let hadir = 0;
+  let izin = 0;
+  let sakit = 0;
+  let tidak_hadir = 0;
+
+  const detail_absensi = [];
+
+  allDates.forEach(tanggal => {
+    const absen = absenMap[tanggal];
+
+    if (absen) {
+      switch (
+        absen.status?.toLowerCase()
+      ) {
+        case "hadir":
+          hadir++;
+          break;
+
+        case "izin":
+          izin++;
+          break;
+
+        case "sakit":
+          sakit++;
+          break;
+
+        default:
+          tidak_hadir++;
+      }
+
+      detail_absensi.push({
+        id: absen.id,
+        tanggal: absen.tanggal_absen,
+        jam_absen: absen.jam_absen,
+        status: absen.status,
+        created_at: absen.created_at
+      });
+    } else {
+      tidak_hadir++;
+
+      detail_absensi.push({
+        tanggal,
+        jam_absen: null,
+        status: "tidak hadir",
+        created_at: null
+      });
+    }
+  });
+
+  const totalHari = allDates.length;
+
+  return {
+    error: null,
+    data: {
+      id: user.id_role,
+      username: user.username,
+      nama_lengkap: user.nama_lengkap,
+      email: user.email,
+
+      jumlah_hadir: hadir,
+      jumlah_izin: izin,
+      jumlah_sakit: sakit,
+      jumlah_tidak_hadir: tidak_hadir,
+
+      total_hari: totalHari,
+
+      persentase_kehadiran: Number(
+        ((hadir / totalHari) * 100).toFixed(2)
+      ),
+
+      detail_absensi
+    }
   };
 }

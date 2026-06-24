@@ -6,9 +6,10 @@ import { insertUser, findUserByUsername, getUserProfile } from "../models/userMo
 // create user (admin only)
 export const createUser = async (req, res) => {
   try {
-    const { username, password, id_role, role } = req.body;
+    const { username, password, id_role, role, nama_lengkap } = req.body;
 
-    if (!username || !password || !id_role || !role) {
+    if (!username || !password || !id_role || !role || !nama_lengkap) {
+      console.log(req.body)
       return res.status(400).json({ error: "Semua field wajib diisi." });
     }
 
@@ -17,6 +18,7 @@ export const createUser = async (req, res) => {
     const newUser = {
       id: uuidv4(),
       username,
+      nama_lengkap,
       password: hashedPassword,
       id_role,
       role,
