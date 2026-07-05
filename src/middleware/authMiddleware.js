@@ -3,16 +3,11 @@ import jwt from "jsonwebtoken";
 export const authenticateToken = (req, res, next) => {
   let token;
 
-  console.log("===== REQUEST =====");
-  console.log("Cookie Header:", req.headers.cookie);
-  console.log("Cookies:", req.cookies);
-  console.log("Headers:", req.headers);
-
   // 1️⃣ Cek header Authorization
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    token = authHeader.split(" ")[1];
-  }
+  // const authHeader = req.headers.authorization;
+  // if (authHeader && authHeader.startsWith("Bearer ")) {
+  //   token = authHeader.split(" ")[1];
+  // }
 
   // 2️⃣ Kalau tidak ada di header, ambil dari cookie
   if (!token && req.cookies?.token) {
