@@ -11,7 +11,7 @@ userRoute.post("/users", authenticateToken, isAdmin, createUser);
 userRoute.post("/login", loginUser);
 
 // get profile (login required)
-userRoute.get("/profile", getProfile);
+userRoute.get("/profile", authenticateToken, getProfile);
 
 // logout
 userRoute.post("/logout", authenticateToken, logoutUser);
