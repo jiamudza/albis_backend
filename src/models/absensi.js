@@ -14,6 +14,13 @@ export const inputAbsen = {
   },
 
   async insertAbsen(userId, tanggal, jam, status = "hadir") {
+
+    const day = new Date(tanggal).getDay();
+
+    if (day === 0) {
+      throw new Error("Hari Minggu tidak dapat melakukan absensi.");
+    }
+
     const { data, error } = await supabase
       .from("absensi")
       .insert({
@@ -27,20 +34,20 @@ export const inputAbsen = {
       .single();
 
     if (error) throw error;
+
     return data;
   },
 
   async updateAbsen(id, jam, status) {
-    const { data, error } = await supabase
+    const { data: current } = await supabase
       .from("absensi")
-      .update({
-        jam_absen: jam,
-        status,
-        /*updated_at: new Date().toISOString()*/
-      })
+      .select("tanggal_absen")
       .eq("id", id)
-      .select()
       .single();
+
+    if (new Date(current.tanggal_absen).getDay() === 0) {
+      throw new Error("Absensi hari Minggu tidak dapat diubah.");
+    }
 
     if (error) throw error;
     return data;
@@ -78,7 +85,7 @@ function getDateRange(startDate, endDate) {
   const end = new Date(endDate);
 
   while (current <= end) {
-    // 0 = Minggu
+    // Lewati hari Minggu
     if (current.getDay() !== 0) {
       dates.push(formatYMD(current));
     }
@@ -89,6 +96,157 @@ function getDateRange(startDate, endDate) {
   return dates;
 }
 
+
+
+function getMonthRange(month, year) {
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+
+  const lastDay = new Date(year, month, 0).getDate();
+
+  const end = `${year}-${String(month).padStart(2, "0")}-${lastDay}`;
+
+  return { start, end };
+}
+
+export async function getAbsenSummaryByIdModel({
+  id,
+  startDate = "",
+  endDate = ""
+}) {
+  const { start, end } = parseDateRange(
+    startDate,
+    endDate
+  );
+
+  const { data: user, error: userError } =
+    await supabase
+      .from("users")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+  if (userError) {
+    return {
+      error: userError,
+      data: null
+    };
+  }
+
+  const {
+    data: absensi,
+    error: absenError
+  } = await supabase
+    .from("absensi")
+    .select("*")
+    .eq("user_id", id)
+    .gte("tanggal_absen", start)
+    .lte("tanggal_absen", end)
+    .order("tanggal_absen", {
+      ascending: true
+    });
+
+  if (absenError) {
+    return {
+      error: absenError,
+      data: null
+    };
+  }
+
+  const allDates = getDateRange(start, end);
+
+  const absenMap = {};
+
+  absensi.forEach(item => {
+    absenMap[item.tanggal_absen] = item;
+  });
+
+  let hadir = 0;
+  let izin = 0;
+  let sakit = 0;
+  let tidak_hadir = 0;
+
+  const detail_absensi = [];
+
+  allDates.forEach(tanggal => {
+    const absen = absenMap[tanggal];
+
+    if (absen) {
+      switch (
+      absen.status?.toLowerCase()
+      ) {
+        case "hadir":
+          hadir++;
+          break;
+
+        case "izin":
+          izin++;
+          break;
+
+        case "sakit":
+          sakit++;
+          break;
+
+        default:
+          tidak_hadir++;
+      }
+
+      detail_absensi.push({
+        id: absen.id,
+        tanggal: absen.tanggal_absen,
+        jam_absen: absen.jam_absen,
+        status: absen.status,
+        created_at: absen.created_at
+      });
+    } else {
+      tidak_hadir++;
+
+      detail_absensi.push({
+        tanggal,
+        jam_absen: null,
+        status: "tidak hadir",
+        created_at: null
+      });
+    }
+  });
+
+  const totalHari = allDates.length;
+
+  const tidakHadir =
+    totalHari - hadir - izin - sakit;
+
+  console.log({
+    nama: user.nama_lengkap,
+    userId: user.id,
+    // userAbsensi,
+    hadir,
+    izin,
+    sakit,
+    tidak_hadir,
+  });
+
+  return {
+    error: null,
+    data: {
+      id: user.id_role,
+      username: user.username,
+      nama_lengkap: user.nama_lengkap,
+      email: user.email,
+
+      jumlah_hadir: hadir,
+      jumlah_izin: izin,
+      jumlah_sakit: sakit,
+      jumlah_tidak_hadir: tidakHadir,
+
+      total_hari: totalHari,
+
+      persentase_kehadiran: Number(
+        ((hadir / totalHari) * 100).toFixed(2)
+      ),
+
+      detail_absensi
+    }
+  };
+}
 export async function getAbsenSummaryListModel({
   page = 1,
   limit = 10,
@@ -143,6 +301,11 @@ export async function getAbsenSummaryListModel({
     .gte("tanggal_absen", start)
     .lte("tanggal_absen", end);
 
+  // console.log("User IDs:", userIds);
+  // console.log("Start:", start);
+  // console.log("End:", end);
+  // console.log("Absensi:", allAbsensi);
+
   if (absenError) {
     return { error: absenError, data: null };
   }
@@ -159,59 +322,82 @@ export async function getAbsenSummaryListModel({
 
   // 5. BUILD RESULT
   const results = users.map((user) => {
-    const userAbsensi = absensiByUser[user.id] || [];
+    const userAbsensi = (allAbsensi || []).filter(
+      (item) => item.user_id === user.id
+    );
 
-    const absenMap = {};
-
-    userAbsensi.forEach((absen) => {
-      absenMap[absen.tanggal_absen] = absen;
-    });
+    // console.log("========================================");
+    // console.log("NAMA USER :", user.nama_lengkap);
+    // console.log("USER ID   :", user.id);
+    // console.log("ABSENSI USER :", userAbsensi);
 
     let hadir = 0;
     let izin = 0;
     let sakit = 0;
-    let tidak_hadir = 0;
 
-    const detail_absensi = [];
+    userAbsensi.forEach((item) => {
+      // console.log("DATA ABSEN :", item);
 
-    allDates.forEach((tanggal) => {
-      const absen = absenMap[tanggal];
+      switch ((item.status || "").trim().toLowerCase()) {
+        case "hadir":
+          hadir++;
+          break;
 
-      if (absen) {
-        const status = (absen.status || "").toLowerCase();
+        case "izin":
+          izin++;
+          break;
 
-        switch (status) {
-          case "hadir":
-            hadir++;
-            break;
-          case "izin":
-            izin++;
-            break;
-          case "sakit":
-            sakit++;
-            break;
-          default:
-            tidak_hadir++;
-        }
-
-        detail_absensi.push({
-          tanggal,
-          status: absen.status,
-          jam_absen: absen.jam_absen,
-          created_at: absen.created_at
-        });
-      } else {
-        tidak_hadir++;
-        detail_absensi.push({
-          tanggal,
-          status: "tidak hadir",
-          jam_absen: null,
-          created_at: null
-        });
+        case "sakit":
+          sakit++;
+          break;
       }
     });
 
-    const totalHari = allDates.length || 1;
+    // console.log("TOTAL HADIR :", hadir);
+
+    const detail_absensi = allDates.map((tanggal) => {
+      const absen = userAbsensi.find(
+        (item) => item.tanggal_absen === tanggal
+      );
+
+      // console.log(
+      //   "Tanggal:",
+      //   tanggal,
+      //   "| Ketemu:",
+      //   absen ? "YA" : "TIDAK"
+      // );
+
+      if (absen) {
+        return {
+          tanggal,
+          status: absen.status,
+          jam_absen: absen.jam_absen,
+          created_at: absen.created_at,
+        };
+      }
+
+      return {
+        tanggal,
+        status: "tidak hadir",
+        jam_absen: null,
+        created_at: null,
+      };
+    });
+
+    const totalHari = allDates.length;
+
+    const tidak_hadir =
+      totalHari - hadir - izin - sakit;
+
+    console.log({
+      hasil: {
+        hadir,
+        izin,
+        sakit,
+        tidak_hadir,
+        totalHari,
+      },
+    });
 
     return {
       id: user.id,
@@ -227,10 +413,10 @@ export async function getAbsenSummaryListModel({
       total_hari: totalHari,
 
       persentase_kehadiran: Number(
-        ((hadir / totalHari) * 100).toFixed(2)
+        ((hadir / (totalHari || 1)) * 100).toFixed(2)
       ),
 
-      detail_absensi
+      detail_absensi,
     };
   });
 
@@ -238,143 +424,5 @@ export async function getAbsenSummaryListModel({
     data: results,
     total: totalUsers,
     error: null
-  };
-}
-
-
-function getMonthRange(month, year) {
-  const start = `${year}-${String(month).padStart(2, "0")}-01`;
-
-  const lastDay = new Date(year, month, 0).getDate();
-
-  const end = `${year}-${String(month).padStart(2, "0")}-${lastDay}`;
-
-  return { start, end };
-}
-
-export async function getAbsenSummaryByIdModel({
-  id,
-  startDate = "",
-  endDate = ""
-}) {
-  const { start, end } = parseDateRange(
-    startDate,
-    endDate
-  );
-
-  const { data: user, error: userError } =
-    await supabase
-      .from("users")
-      .select("*")
-      .eq("id_role", id)
-      .single();
-
-  if (userError) {
-    return {
-      error: userError,
-      data: null
-    };
-  }
-
-  const {
-    data: absensi,
-    error: absenError
-  } = await supabase
-    .from("absensi")
-    .select("*")
-    .eq("user_id", id)
-    .gte("tanggal_absen", start)
-    .lte("tanggal_absen", end)
-    .order("tanggal_absen", {
-      ascending: true
-    });
-
-  if (absenError) {
-    return {
-      error: absenError,
-      data: null
-    };
-  }
-
-  const allDates = getDateRange(start, end);
-
-  const absenMap = {};
-
-  absensi.forEach(item => {
-    absenMap[item.tanggal_absen] = item;
-  });
-
-  let hadir = 0;
-  let izin = 0;
-  let sakit = 0;
-  let tidak_hadir = 0;
-
-  const detail_absensi = [];
-
-  allDates.forEach(tanggal => {
-    const absen = absenMap[tanggal];
-
-    if (absen) {
-      switch (
-        absen.status?.toLowerCase()
-      ) {
-        case "hadir":
-          hadir++;
-          break;
-
-        case "izin":
-          izin++;
-          break;
-
-        case "sakit":
-          sakit++;
-          break;
-
-        default:
-          tidak_hadir++;
-      }
-
-      detail_absensi.push({
-        id: absen.id,
-        tanggal: absen.tanggal_absen,
-        jam_absen: absen.jam_absen,
-        status: absen.status,
-        created_at: absen.created_at
-      });
-    } else {
-      tidak_hadir++;
-
-      detail_absensi.push({
-        tanggal,
-        jam_absen: null,
-        status: "tidak hadir",
-        created_at: null
-      });
-    }
-  });
-
-  const totalHari = allDates.length;
-
-  return {
-    error: null,
-    data: {
-      id: user.id_role,
-      username: user.username,
-      nama_lengkap: user.nama_lengkap,
-      email: user.email,
-
-      jumlah_hadir: hadir,
-      jumlah_izin: izin,
-      jumlah_sakit: sakit,
-      jumlah_tidak_hadir: tidak_hadir,
-
-      total_hari: totalHari,
-
-      persentase_kehadiran: Number(
-        ((hadir / totalHari) * 100).toFixed(2)
-      ),
-
-      detail_absensi
-    }
   };
 }

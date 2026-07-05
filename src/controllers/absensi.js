@@ -52,7 +52,6 @@ export const addAbsen = {
         data: result
       });
     } catch (error) {
-      console.error(error);
       return res.status(500).json({
         success: false,
         error: error.message
@@ -75,6 +74,7 @@ export async function getAbsenSummaryListController(req, res) {
       endDate: endDate || ""
     });
 
+
     if (result.error) {
       return res.status(400).json({
         success: false,
@@ -90,6 +90,7 @@ export async function getAbsenSummaryListController(req, res) {
       data: result.data
     });
   } catch (err) {
+
     return res.status(500).json({
       success: false,
       error: err.message

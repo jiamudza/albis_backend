@@ -23,7 +23,6 @@ export const login = async (req, res) => {
       data: calonSiswa,
     });
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ message: 'Terjadi kesalahan server' });
   }
 };
