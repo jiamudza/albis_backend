@@ -4,10 +4,10 @@ export const authenticateToken = (req, res, next) => {
   let token;
 
   // 1️⃣ Cek header Authorization
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    token = authHeader.split(" ")[1];
-  }
+  // const authHeader = req.headers.authorization;
+  // if (authHeader && authHeader.startsWith("Bearer ")) {
+  //   token = authHeader.split(" ")[1];
+  // }
 
   // 2️⃣ Kalau tidak ada di header, ambil dari cookie
   if (!token && req.cookies?.token) {
