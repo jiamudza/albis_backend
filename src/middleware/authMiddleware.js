@@ -3,27 +3,43 @@ import jwt from "jsonwebtoken";
 export const authenticateToken = (req, res, next) => {
   let token;
 
-  // 1️⃣ Cek header Authorization
-  // const authHeader = req.headers.authorization;
-  // if (authHeader && authHeader.startsWith("Bearer ")) {
-  //   token = authHeader.split(" ")[1];
-  // }
+  console.log("===== AUTH =====");
+  console.log("URL:", req.originalUrl);
+  console.log("Authorization:", req.headers.authorization);
+  console.log("Cookies:", req.cookies);
 
-  // 2️⃣ Kalau tidak ada di header, ambil dari cookie
-  if (!token && req.cookies?.token) {
-    token = req.cookies.token;
+  const authHeader = req.headers.authorization;
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+    console.log("Token dari Authorization");
   }
 
+  if (!token && req.cookies?.token) {
+    token = req.cookies.token;
+    console.log("Token dari Cookie");
+  }
+
+  console.log("Final Token:", token);
+
   if (!token) {
-    return res.status(401).json({ error: "Access denied, token missing" });
+    console.log("TOKEN MISSING");
+    return res.status(401).json({
+      error: "Access denied, token missing",
+    });
   }
 
   try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = verified;
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("JWT VERIFIED:", req.user);
+
     next();
   } catch (err) {
-    res.status(403).json({ error: "Invalid or expired token" });
+    console.log("JWT ERROR:", err.message);
+
+    return res.status(403).json({
+      error: "Invalid or expired token",
+    });
   }
 };
 
